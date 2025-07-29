@@ -1,0 +1,34 @@
+# Module 5: Simulation Orchestration & Benchmarking Requirements
+
+# Core dependencies
+pandas>=2.0.0
+numpy>=1.24.0
+cvxpy>=1.4.0
+
+# Progress tracking
+tqdm>=4.65.0
+
+# Date/time handling
+python-dateutil>=2.8.0
+
+# Environment configuration
+python-dotenv>=1.0.0
+
+# Google AI API for LLM integration
+google-generativeai>=0.3.0
+langchain-google-genai>=1.0.0
+
+# Graph-based agent framework
+langgraph>=0.0.40
+
+# Data validation
+pydantic>=2.0.0
+
+# Statistical analysis
+scipy>=1.10.0
+
+# Logging
+loguru>=0.7.0
+
+# File I/O
+pathlib

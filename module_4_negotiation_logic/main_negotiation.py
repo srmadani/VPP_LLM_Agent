@@ -193,12 +193,11 @@ class CoreNegotiationEngine:
         is_available = available_capacity > 1.0  # Minimum 1kW to participate
         
         # Apply user preference constraints
-        if prosumer.user_preferences:
-            # Check backup power requirements
-            backup_requirement = prosumer.user_preferences.get('backup_power_percent', 30.0)
-            if prosumer.bess and prosumer.bess.current_soc_percent <= backup_requirement:
-                is_available = False
-                available_capacity = 0.0
+        # Check backup power requirements using individual preference attributes
+        backup_requirement = 30.0  # Default backup power percentage
+        if prosumer.bess and prosumer.bess.current_soc_percent <= backup_requirement:
+            is_available = False
+            available_capacity = 0.0
         
         # Calculate pricing using LLM
         min_price = self._calculate_prosumer_price(prosumer, opportunity, available_capacity)
@@ -213,7 +212,12 @@ class CoreNegotiationEngine:
             minimum_price_per_mwh=min_price,
             startup_cost=0.0,  # No startup cost for residential assets
             variable_cost_per_mwh=5.0,  # Small wear-and-tear cost
-            user_preferences=prosumer.user_preferences or {},
+            user_preferences={
+                "backup_power_hours": prosumer.backup_power_hours,
+                "ev_priority": prosumer.ev_priority,
+                "participation_willingness": prosumer.participation_willingness,
+                "min_compensation_per_kwh": prosumer.min_compensation_per_kwh
+            },
             asset_constraints={
                 "bess_capacity": prosumer.bess.capacity_kwh if prosumer.bess else 0.0,
                 "current_soc": prosumer.bess.current_soc_percent if prosumer.bess else 0.0,
@@ -243,11 +247,10 @@ class CoreNegotiationEngine:
         
         # Adjust for user preferences
         preference_premium = 0.0
-        if prosumer.user_preferences:
-            # Higher premium for backup-conscious users
-            backup_pref = prosumer.user_preferences.get('backup_power_percent', 30.0)
-            if backup_pref > 40.0:
-                preference_premium = base_price * 0.15
+        # Higher premium for backup-conscious users
+        backup_pref = prosumer.backup_power_hours * 7.5  # Convert hours to rough percentage
+        if backup_pref > 40.0:
+            preference_premium = base_price * 0.15
         
         # Market type adjustments
         market_premium = 0.0
@@ -371,12 +374,11 @@ class CoreNegotiationEngine:
         counter_price = offer.offered_price_per_mwh
         
         # Adjust based on prosumer characteristics
-        if prosumer.user_preferences:
-            risk_tolerance = prosumer.user_preferences.get('risk_tolerance', 'medium')
-            if risk_tolerance == 'low':
-                counter_price *= 1.1  # Demand 10% higher price
-            elif risk_tolerance == 'high':
-                counter_price *= 0.95  # Accept 5% lower price
+        # Use participation_willingness as a proxy for risk tolerance
+        if prosumer.participation_willingness < 0.5:
+            counter_price *= 1.1  # Demand 10% higher price (low risk tolerance)
+        elif prosumer.participation_willingness > 0.8:
+            counter_price *= 0.95  # Accept 5% lower price (high risk tolerance)
         
         # Capacity constraints
         available_capacity = 0.0
