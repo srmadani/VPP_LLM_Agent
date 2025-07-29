@@ -1,52 +1,112 @@
 # Module 2: Prosumer Asset & Behavior Modeling
 
-## Overview
+Distributed energy resource (DER) asset modeling and prosumer behavior simulation for VPP agent systems.
 
-Module 2 provides comprehensive modeling capabilities for distributed energy resource (DER) assets and prosumer behavior within the VPP LLM Agent system. This module creates realistic simulations of residential prosumers with diverse asset portfolios including Battery Energy Storage Systems (BESS), Electric Vehicles (EVs), and Solar PV systems.
+## Components
 
-## Key Features
+### Asset Models
+- **BESS**: Physics-based battery with SOC tracking, efficiency curves, operational constraints
+- **Electric Vehicles**: Charging requirements, mobility patterns, departure time constraints  
+- **Solar PV**: Generation forecasting with weather dependencies and system efficiency
 
-### 🔋 **Advanced Asset Modeling**
-- **Battery Energy Storage Systems (BESS)**: Physics-based models with SOC tracking, efficiency curves, and operational constraints
-- **Electric Vehicles (EVs)**: Charging requirements, mobility patterns, and V2G capabilities  
-- **Solar PV Systems**: Generation forecasting with weather dependencies and system efficiency
+### Fleet Generation
+- **Distribution Modeling**: California residential adoption rates (35% BESS, 45% EV, 55% Solar)
+- **Preference Profiles**: Conservative, moderate, and aggressive participation behaviors
+- **Configuration Export**: CSV fleet summaries for simulation integration
 
-### 👥 **Prosumer Fleet Generation**
-- **Realistic Asset Distributions**: Based on California residential adoption rates
-- **Diverse Configurations**: 35% BESS, 45% EV, 55% Solar penetration rates
-- **User Preference Modeling**: Conservative, moderate, and aggressive participation profiles
+### LLM Parser
+- **Natural Language Processing**: Convert text descriptions to structured configurations
+- **Gemini API Integration**: Parse qualitative preferences and asset specifications
+- **Validation Layer**: Ensure realistic and consistent parameters
 
-### 🤖 **LLM-Powered Configuration Parser**
-- **Natural Language Processing**: Convert text descriptions to structured prosumer configs
-- **Gemini API Integration**: Advanced language understanding for qualitative preferences
-- **Robust Validation**: Ensures realistic and consistent asset specifications
-
-## Module Structure
+## Structure
 
 ```
 module_2_asset_modeling/
-├── prosumer_models.py      # Core asset and prosumer classes
-├── fleet_generator.py      # Fleet creation and management
-├── llm_parser.py          # LLM-powered natural language parser
-├── test_module2.py        # Comprehensive test suite
-├── requirements.txt       # Python dependencies
-├── README.md             # This documentation
-└── generated_files/      # Output directory for fleet data
+├── prosumer_models.py      # Core asset classes
+├── fleet_generator.py      # Fleet creation
+├── llm_parser.py          # Natural language parser
+├── test_module2.py        # Test suite
+├── requirements.txt       # Dependencies
+└── README.md             # Documentation
 ```
 
-## Installation & Setup
+## Installation
 
-### Prerequisites
-- Python 3.8+
-- Access to Module 1 data (`../module_1_data_simulation/data/`)
-- Gemini API key (optional - has fallback defaults)
-
-### Install Dependencies
 ```bash
 cd module_2_asset_modeling
 source ../venv/bin/activate
 pip install -r requirements.txt
 ```
+
+## Usage
+
+### Basic Asset Modeling
+```python
+from prosumer_models import BESS, ElectricVehicle, SolarPV, Prosumer
+
+# Create assets
+battery = BESS(capacity_kwh=13.5, max_power_kw=5.0, efficiency=0.95)
+solar = SolarPV(capacity_kw=8.0, efficiency=0.22, tilt=30, azimuth=180)
+prosumer = Prosumer(prosumer_id="P001", load_profile=load_data, assets=[battery, solar])
+
+# Simulate charging opportunity
+opportunity = prosumer.evaluate_market_opportunity(price=0.15, duration_hours=4)
+```
+
+### Fleet Generation
+```python
+from fleet_generator import FleetGenerator
+
+generator = FleetGenerator()
+fleet = generator.generate_fleet(
+    n_prosumers=20,
+    data_dir="../module_1_data_simulation/data"
+)
+generator.export_fleet_csv(fleet, "fleet_summary.csv")
+```
+
+### LLM Configuration Parser
+```python
+from llm_parser import LLMProsumerParser
+
+parser = LLMProsumerParser()
+config = parser.parse_prosumer_description(
+    "Conservative homeowner with 10kWh Tesla Powerwall, 6kW solar panels"
+)
+prosumer = parser.create_prosumer_from_description(config, load_data)
+```
+
+## Testing
+
+Run comprehensive test suite:
+```bash
+python -m pytest test_module2.py -v
+```
+
+## Architecture
+
+### Asset Classes
+- **BESS**: State-of-charge tracking, charging/discharging efficiency, capacity constraints
+- **ElectricVehicle**: Battery capacity, charging power limits, departure time requirements
+- **SolarPV**: Weather-dependent generation, panel specifications, optimal positioning
+- **Prosumer**: Asset aggregation, market participation logic, preference modeling
+
+### Fleet Generator
+- California adoption statistics for realistic asset distributions
+- Preference categorization (conservative/moderate/aggressive participation)
+- Load profile assignment from Module 1 data
+
+### LLM Parser
+- Gemini API integration for natural language understanding
+- Configuration validation and parameter extraction
+- Batch processing capabilities for multiple descriptions
+
+## Output Files
+
+- `fleet_summary.csv`: Prosumer configurations and asset specifications
+- `prosumer_configs.json`: Detailed fleet data for simulation systems
+- `test_results.json`: Validation metrics and performance benchmarks
 
 ### Environment Configuration
 Ensure your `.env` file contains:

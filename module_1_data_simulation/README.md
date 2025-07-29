@@ -1,53 +1,36 @@
-# Module 1: Data &├── README.md                   # This file
-├── requirements.txt            # Python dependencies
-├── collect_data.py            # Main data collection script
-├── test_data.py              # Data validation and testing
-├── create_dashboard.py       # Interactive data dashboard
-├── setup_environment.sh      # Environment setup script
-└── data/                     # Output directory
-    ├── market_data.csv       # CAISO market prices
-    ├── solar_data.csv        # Solar generation profiles
-    └── load_profiles/        # Individual household load profiles
-        ├── profile_1.csv
-        ├── profile_2.csv
-        └── ...Environment
+# Module 1: Data & Simulation Environment
 
-## Overview
+Data collection and processing for VPP agent simulation, providing CAISO market data, solar generation profiles, and residential load patterns.
 
-This module is responsible for acquiring, cleaning, and structuring all necessary market and environmental data for the VPP (Virtual Power Plant) Agent PoC. It creates a foundational dataset covering CAISO market prices, solar generation potential, and residential load profiles for a 7-day simulation period.
+## Components
 
-## Key Features
+- **CAISO Market Data**: Locational Marginal Prices (LMP) and ancillary service prices (SPIN/NONSPIN)
+- **Solar Generation Data**: NREL PVWatts API integration for realistic generation profiles
+- **Load Profile Generation**: Diverse residential electricity consumption patterns
+- **Data Standardization**: 15-minute intervals with synchronized timestamps
+- **Fallback System**: Synthetic data generation when APIs unavailable
 
-- **CAISO Market Data**: Fetches real-time Locational Marginal Prices (LMP) and ancillary service prices (SPIN/NONSPIN)
-- **Solar Generation Data**: Uses NREL PVWatts API to get realistic solar generation profiles
-- **Load Profile Generation**: Creates diverse residential electricity consumption patterns
-- **Data Standardization**: All data normalized to 15-minute intervals with consistent timestamps
-- **Robust Fallbacks**: Synthetic data generation when APIs are unavailable
-
-## Project Structure
+## Structure
 
 ```
 module_1_data_simulation/
-├── README.md                   # This file
-├── requirements.txt            # Python dependencies
-├── collect_data.py            # Main data collection script
-├── test_data.py              # Data validation and testing
-├── setup_environment.sh      # Environment setup script
-└── data/                     # Output directory
-    ├── market_data.csv       # CAISO market prices
-    ├── solar_data.csv        # Solar generation profiles
-    └── load_profiles/        # Individual household load profiles
-        ├── profile_1.csv
-        ├── profile_2.csv
-        └── ...
+├── README.md                   # Documentation
+├── requirements.txt            # Dependencies
+├── collect_data.py            # Data collection
+├── test_data.py              # Validation
+├── create_dashboard.py       # Visualization
+└── data/                     # Output
+    ├── market_data.csv       # CAISO prices
+    ├── solar_data.csv        # Solar profiles
+    └── load_profiles/        # Load patterns
 ```
 
 ## Configuration
 
-### Target Parameters
-- **Market**: CAISO (California Independent System Operator)
-- **Time Period**: August 15-21, 2023 (7 days)
+- **Market**: CAISO
+- **Period**: August 15-21, 2023 (7 days, 672 intervals)
 - **Location**: Los Angeles, CA (34.05°N, -118.24°W)
+- **Resolution**: 15-minute intervals
 - **Data Resolution**: 15-minute intervals
 - **Load Profiles**: 20 diverse residential households
 
@@ -65,133 +48,74 @@ GRIDSTATUS_API_KEY=your_gridstatus_api_key_here
 
 ## Installation & Setup
 
-### 1. Create Shared Virtual Environment
+## Installation
 
 ```bash
-# Navigate to project root
-cd /path/to/VPP_LLM_Agent
-
-# Create shared virtual environment (for all modules)
-python3 -m venv venv
-source venv/bin/activate  # On macOS/Linux
-# or
-venv\\Scripts\\activate   # On Windows
-
-# Navigate to module 1
+# From project root
+cp .env.example .env  # Add API keys
+source venv/bin/activate
 cd module_1_data_simulation
+pip install -r requirements.txt
 ```
 
-### 2. Install Dependencies
+### API Keys
 
+Add to `.env`:
 ```bash
-# Install requirements (from project root with venv activated)
-pip install -r module_1_data_simulation/requirements.txt
-```
-
-### 3. Configure API Keys
-
-Copy the example environment file and add your API keys:
-
-```bash
-# Copy the example file
-cp .env.example .env
-
-# Edit .env with your actual API keys
-# Get NREL API key from: https://developer.nrel.gov/signup/
-# Get GridStatus API key from: https://www.gridstatus.io/
-```
-
-Example `.env` file:
-```bash
-NREL_API_KEY=your_actual_nrel_api_key_here
-GRIDSTATUS_API_KEY=your_actual_gridstatus_api_key_here
-GEMINI_API_KEY=your_gemini_api_key_here
+NREL_API_KEY=your_nrel_api_key        # https://developer.nrel.gov/signup/
+GRIDSTATUS_API_KEY=your_gridstatus_key # https://www.gridstatus.io/
 ```
 
 ## Usage
 
-### Basic Data Collection
-
+### Data Collection
 ```bash
-# Activate shared virtual environment (from project root)
-source venv/bin/activate
+python collect_data.py  # Generate all datasets
 
-# Navigate to module 1
-cd module_1_data_simulation
-
-# Run data collection
-python collect_data.py
-
-# Validate results
-python test_data.py
-
-# Generate dashboard
-python create_dashboard.py
+```
+python test_data.py     # Validate datasets
+python create_dashboard.py  # Generate visualization
 ```
 
-### Advanced Usage
+### Configuration
 
-You can modify the configuration in `collect_data.py`:
-
+Modify `collect_data.py` parameters:
 ```python
 config = {
-    "start_date": "2023-08-15",    # Start date (YYYY-MM-DD)
-    "end_date": "2023-08-21",      # End date (YYYY-MM-DD)
-    "latitude": 34.05,             # Target latitude
-    "longitude": -118.24           # Target longitude
+    "start_date": "2023-08-15",
+    "end_date": "2023-08-21", 
+    "latitude": 34.05,
+    "longitude": -118.24
 }
 ```
 
-## Output Files
+## Output Data
 
-### 1. Market Data (`data/market_data.csv`)
+### Market Data (`data/market_data.csv`)
+CAISO market prices at 15-minute intervals:
 
-Contains CAISO market prices at 15-minute intervals:
+| Column | Description | Units |
+|--------|-------------|-------|
+| `timestamp` | Date/time | ISO format |
+| `lmp` | Locational Marginal Price | $/MWh |
+| `spin_price` | Spinning Reserve Price | $/MWh |
+| `nonspin_price` | Non-Spinning Reserve Price | $/MWh |
 
-| Column | Description | Units | Example Value |
-|--------|-------------|-------|---------------|
-| `timestamp` | Date and time | ISO format | `2023-08-15 00:00:00` |
-| `lmp` | Locational Marginal Price | $/MWh | `50.25` |
-| `spin_price` | Spinning Reserve Price | $/MWh | `8.50` |
-| `nonspin_price` | Non-Spinning Reserve Price | $/MWh | `5.20` |
+### Solar Data (`data/solar_data.csv`)
+Normalized generation per kW installed:
 
-**Sample:**
-```csv
-timestamp,lmp,spin_price,nonspin_price
-2023-08-15 00:00:00,50.25,8.50,5.20
-2023-08-15 00:15:00,48.75,7.80,4.95
-```
+| Column | Description | Units |
+|--------|-------------|-------|
+| `timestamp` | Date/time | ISO format |
+| `generation_kw_per_kw_installed` | Generation factor | kW/kW |
 
-### 2. Solar Data (`data/solar_data.csv`)
+### Load Profiles (`data/load_profiles/profile_X.csv`)
+Household consumption patterns:
 
-Normalized solar generation potential per kW of installed capacity:
-
-| Column | Description | Units | Range |
-|--------|-------------|-------|-------|
-| `timestamp` | Date and time | ISO format | - |
-| `generation_kw_per_kw_installed` | Generation per kW installed | kW/kW | `0.0 - 1.2` |
-
-**Sample:**
-```csv
-timestamp,generation_kw_per_kw_installed
-2023-08-15 06:00:00,0.15
-2023-08-15 12:00:00,0.95
-2023-08-15 18:00:00,0.30
-```
-
-### 3. Load Profiles (`data/load_profiles/profile_X.csv`)
-
-Individual household electricity consumption patterns:
-
-| Column | Description | Units | Typical Range |
-|--------|-------------|-------|---------------|
-| `timestamp` | Date and time | ISO format | - |
-| `load_kw` | Electricity consumption | kW | `0.1 - 8.0` |
-
-**Sample:**
-```csv
-timestamp,load_kw
-2023-08-15 00:00:00,1.2
+| Column | Description | Units |
+|--------|-------------|-------|
+| `timestamp` | Date/time | ISO format |
+| `load_kw` | Consumption | kW |
 2023-08-15 07:30:00,3.5
 2023-08-15 19:00:00,4.8
 ```
@@ -224,106 +148,61 @@ The module includes comprehensive validation:
 - **Rate Limit**: 1,000 requests/hour
 - **Fallback**: Synthetic solar curves based on solar physics
 
+## Data Sources
+
+### NREL PVWatts API
+- Solar generation profiles for residential systems
+- Rate limit: 1000 requests/hour
+- Fallback: Synthetic solar patterns
+
 ### GridStatus.io
-- **Purpose**: CAISO market data
-- **Library**: `gridstatus` Python package
-- **Rate Limit**: Varies by endpoint
-- **Fallback**: Synthetic market prices with realistic daily patterns
+- CAISO market data (LMP, ancillary services)
+- Rate limit: Varies by endpoint  
+- Fallback: Synthetic market prices
 
-## Error Handling & Fallbacks
-
-The system is designed to be robust:
-
-1. **API Unavailable**: Generates synthetic data with realistic patterns
-2. **Network Issues**: Implements retry logic with exponential backoff
-3. **Data Quality Issues**: Validates and cleans all inputs
-4. **Missing Data**: Forward-fills gaps and interpolates missing values
-
-## Testing
-
-Run the test suite to validate data quality:
+## Validation
 
 ```bash
 python test_data.py
 ```
 
-### Test Coverage
-- **Data Integrity**: File existence, column validation, value ranges
-- **Data Consistency**: Timestamp alignment, interval consistency
-- **Statistical Validation**: Realistic price/generation patterns
+Tests validate:
+- File existence and structure
+- Value ranges and data types  
+- Timestamp alignment (15-minute intervals)
+- Statistical patterns (realistic price/generation curves)
+
+## Performance
+
+- **Execution**: 5-10 minutes
+- **Memory**: <100MB peak
+- **Output**: ~2MB total
+- **API calls**: ~50 requests
+
+## Integration
+
+Provides data foundation for:
+- **Module 2**: Load profiles and solar data for asset modeling
+- **Module 3+**: Market prices for agent bidding algorithms
+
+## Data Format
+
+- **Timestamps**: ISO 8601 UTC format
+- **Power**: kW
+- **Energy**: kWh  
+- **Prices**: $/MWh
+- **Intervals**: 15 minutes
 
 ## Troubleshooting
 
-### Common Issues
-
-1. **Import Errors**
-   ```bash
-   # Solution: Ensure virtual environment is activated
-   source venv/bin/activate
-   pip install -r requirements.txt
-   ```
-
-2. **API Key Errors**
-   ```bash
-   # Solution: Check .env file in project root
-   NREL_API_KEY=your_actual_key_here
-   ```
-
-3. **Empty Data Files**
-   ```bash
-   # Solution: Check API connectivity and fallback to synthetic data
-   # The system automatically generates synthetic data if APIs fail
-   ```
-
-### Debug Mode
-
-Enable detailed logging by modifying the logging level:
-
-```python
-logging.basicConfig(level=logging.DEBUG)
+**Import errors**: Activate virtual environment
+```bash
+source venv/bin/activate
 ```
 
-## Performance Specifications
+**API failures**: System automatically uses synthetic data fallbacks
 
-- **Execution Time**: ~5-10 minutes (depending on API response times)
-- **Memory Usage**: <100MB peak
-- **Output Size**: ~2MB total data files
-- **Network Requests**: ~50 API calls (NREL + GridStatus)
-
-## Integration with Other Modules
-
-This module provides the foundation for all subsequent modules:
-
-- **Module 2 (Asset Modeling)**: Uses load profiles and solar data
-- **Module 3 (Market Interface)**: Uses market pricing data
-- **Module 4-6 (Agent Framework)**: All modules depend on this time series data
-
-## Data Dictionary
-
-### Timestamp Format
-All timestamps use ISO 8601 format in UTC: `YYYY-MM-DD HH:MM:SS`
-
-### Units & Conventions
-- **Power**: Kilowatts (kW)
-- **Energy**: Kilowatt-hours (kWh)
-- **Prices**: Dollars per Megawatt-hour ($/MWh)
-- **Time Intervals**: 15 minutes
-- **Geographic**: Decimal degrees (WGS84)
-
-## Future Enhancements
-
-1. **Multi-Region Support**: Extend to other ISOs (PJM, ERCOT, etc.)
-2. **Weather Integration**: Add temperature and weather data
-3. **Demand Response Events**: Include DR program signals
-4. **EV Integration**: Add electric vehicle charging profiles
-5. **Storage Modeling**: Include battery storage characteristics
-
-## Contact & Support
-
-For issues or questions regarding this module:
-- Check the troubleshooting section above
-- Review API documentation for NREL and GridStatus
-- Validate environment setup and dependencies
+**Empty files**: Check API keys in `.env` file
 
 ---
 
