@@ -190,8 +190,8 @@ class VPPDataCollector:
         """Generate residential load profiles."""
         logger.info("Generating residential load profiles...")
         
-        # Generate 20 diverse residential load profiles
-        num_profiles = 20
+        # Generate 200 diverse residential load profiles to support scaled fleet
+        num_profiles = 200
         
         start_date = pd.to_datetime(self.config["start_date"])
         end_date = pd.to_datetime(self.config["end_date"]) + timedelta(days=1)
@@ -397,10 +397,10 @@ class VPPDataCollector:
 def main():
     """Main execution function."""
     
-    # Configuration
+    # Configuration - Extended to full month for realistic simulation
     config = {
-        "start_date": "2023-08-15",
-        "end_date": "2023-08-21",
+        "start_date": "2023-08-01",
+        "end_date": "2023-08-31",
         "latitude": 34.05,
         "longitude": -118.24
     }

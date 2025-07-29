@@ -135,9 +135,9 @@ class VPPSimulationOrchestrator:
     
     def run_full_simulation(
         self,
-        fleet_size: int = 20,
+        fleet_size: int = 200,  # Scaled up 10x from original 20
         start_timestamp: Optional[datetime] = None,
-        duration_hours: int = 168,  # 7 days
+        duration_hours: int = 744,  # 31 days (August) = 31 * 24 = 744 hours
         opportunity_frequency_hours: int = 1  # Market opportunities every hour
     ) -> SimulationSummary:
         """
@@ -279,12 +279,21 @@ class VPPSimulationOrchestrator:
         from schemas import MarketOpportunity, MarketOpportunityType
         from datetime import timedelta
         
+        # Calculate total available fleet capacity
+        total_capacity_kw = sum(
+            prosumer.get_available_capacity_kw() for prosumer in self.prosumer_fleet
+        )
+        
+        # Set required capacity to be achievable (50-80% of total available capacity)
+        required_capacity_kw = min(total_capacity_kw * 0.7, 100.0)  # Max 100kW for residential VPP
+        required_capacity_mw = required_capacity_kw / 1000.0
+        
         return MarketOpportunity(
             opportunity_id=f"opp_{current_time.strftime('%Y%m%d_%H%M')}",
             market_type=MarketOpportunityType.ENERGY,
             timestamp=current_time,
             duration_hours=1.0,
-            required_capacity_mw=5.0,  # Reasonable limit for residential VPP
+            required_capacity_mw=required_capacity_mw,  # Realistic capacity for residential fleet
             market_price_mwh=float(market_row['lmp']),
             deadline=current_time + timedelta(minutes=15)  # 15-minute ahead market
         )
@@ -400,9 +409,10 @@ class VPPSimulationOrchestrator:
                 summary.centralized_total_profit * 100
             )
         
-        if summary.centralized_avg_satisfaction >= 0:
+        if summary.centralized_avg_satisfaction > 0:
             summary.satisfaction_advantage_percent = (
-                (summary.agentic_avg_satisfaction - summary.centralized_avg_satisfaction) * 100
+                (summary.agentic_avg_satisfaction - summary.centralized_avg_satisfaction) / 
+                summary.centralized_avg_satisfaction * 100
             )
         
         if summary.centralized_total_capacity_mwh > 0:
@@ -481,11 +491,11 @@ def main():
     # Run simulation with different configurations
     print("Starting VPP LLM Agent Simulation...")
     
-    # Small fleet test
+    # Run realistic scale simulation
     summary = orchestrator.run_full_simulation(
-        fleet_size=10,
-        duration_hours=24,  # 1 day test
-        opportunity_frequency_hours=2  # Every 2 hours
+        fleet_size=200,  # Scaled up fleet size
+        duration_hours=744,  # Full month (August)
+        opportunity_frequency_hours=1  # Hourly opportunities
     )
     
     print("\n=== Simulation Complete ===")

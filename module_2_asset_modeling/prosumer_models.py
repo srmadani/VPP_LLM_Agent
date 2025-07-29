@@ -275,6 +275,11 @@ class Prosumer(BaseModel):
             "max_duration_hours": 4.0  # Maximum event duration willing to participate
         }
     
+    def get_available_capacity_kw(self) -> float:
+        """Get total available discharge capacity for market participation."""
+        flexibility = self.get_available_flexibility_kw()
+        return flexibility["discharge"]
+    
     def get_status_summary(self) -> Dict[str, Any]:
         """Get comprehensive status summary of all assets."""
         status = {

@@ -174,7 +174,7 @@ class IntegratedNegotiationSystem:
                         "prosumer_id": member.prosumer_id,
                         "capacity_kw": member.committed_capacity_kw,
                         "price_mwh": member.agreed_price_per_mwh,
-                        "satisfaction": getattr(member, 'satisfaction_score', 7.5)  # Default if not present
+                        "satisfaction": getattr(member, 'satisfaction_score', 6.0)  # Realistic baseline if not present
                     }
                     for member in negotiation_result.coalition_members
                 ]

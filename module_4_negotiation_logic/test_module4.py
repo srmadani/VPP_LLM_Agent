@@ -36,6 +36,14 @@ class TestProsumer:
     def __init__(self, prosumer_id: str, capacity: float = 5.0, soc: float = 60.0):
         self.prosumer_id = prosumer_id
         self.bess = TestBESS(capacity, soc)
+        self.backup_power_hours = 4.0  # Required backup power duration (hours)
+        self.ev_priority = "medium"  # EV charging priority
+        self.comfort_temperature_range = (68, 76)  # Temperature range
+        self.participation_willingness = 0.8  # Willingness to participate
+        self.min_compensation_per_kwh = 0.15  # Minimum compensation
+        self.max_discharge_percent = 60.0  # Max battery discharge
+        self.load_profile_id = f"profile_{prosumer_id}"
+        self.current_load_kw = 1.0
         self.user_preferences = {
             'backup_power_percent': 30.0,
             'risk_tolerance': 'medium'

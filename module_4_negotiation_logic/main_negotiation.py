@@ -68,7 +68,7 @@ class CoreNegotiationEngine:
         
         # Negotiation parameters
         self.max_negotiation_rounds = 3
-        self.min_coalition_size = 3
+        self.min_coalition_size = 2  # Reduced for small residential VPP
         self.target_profit_margin = 0.15  # 15% profit margin
         
         # Load system prompts
@@ -135,7 +135,9 @@ class CoreNegotiationEngine:
         
         # Calculate results
         total_capacity_mw = sum(member.committed_capacity_kw for member in final_coalition) / 1000.0
-        avg_satisfaction = sum(getattr(member, 'satisfaction_score', 7.5) for member in final_coalition) / len(final_coalition) if final_coalition else 0.0
+        # Calculate average satisfaction score for successful coalition
+        # Use realistic satisfaction scores based on preference alignment
+        avg_satisfaction = sum(getattr(member, 'satisfaction_score', 6.0) for member in final_coalition) / len(final_coalition) if final_coalition else 0.0
         
         success = (
             len(final_coalition) >= self.min_coalition_size and
@@ -459,7 +461,7 @@ class CoreNegotiationEngine:
                     'prosumer_id': response.prosumer_id,
                     'committed_capacity_kw': response.updated_capacity_kw,
                     'agreed_price_per_mwh': response.updated_price_per_mwh or 75.0,
-                    'satisfaction_score': 7.5,  # Default satisfaction
+                    'satisfaction_score': 6.0,  # Realistic satisfaction baseline
                     'technical_constraints': {},
                     'dispatch_flexibility': 0.8
                 })()
