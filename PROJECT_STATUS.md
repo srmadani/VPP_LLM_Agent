@@ -40,19 +40,35 @@ Virtual Power Plant (VPP) Agent proof-of-concept implementing agentic negotiatio
 - **LLM Integration**: 90% accuracy in natural language parsing
 - **Memory Usage**: 2KB per prosumer, 2MB for 1000-prosumer fleet
 
+### ✅ Module 3: Agentic Framework & Communication - COMPLETED
+
+**Status**: Production ready  
+**Location**: `/module_3_agentic_framework/`  
+**Completion Date**: July 29, 2025
+
+#### Components:
+- **`agent_framework.py`**: LangGraph-based multi-agent system with negotiation workflow
+- **`schemas.py`**: Pydantic models for all inter-agent communication messages  
+- **`prompts/`**: System prompts defining AggregatorAgent and ProsumerAgent behaviors
+- **Test suite**: Comprehensive validation of all framework components
+- **Demo suite**: Interactive demonstrations of negotiation scenarios
+- **Integration layer**: Module 2 prosumer fleet compatibility
+
+#### Implementation Details:
+- **Agent System**: LangGraph state-based workflow with 7 negotiation nodes
+- **Communication**: Strict Pydantic schema validation for all agent messages
+- **Workflow**: Multi-round negotiation supporting energy and ancillary services
+- **Scalability**: Tested with fleets up to 20 prosumers (limited by load profiles)
+- **Market Support**: Energy, spinning reserves, and non-spinning reserves
+- **Integration**: Seamless Module 2 asset model integration
+
 ---
 
 ## Pending Modules
 
-### Module 3: Agentic Framework & Communication
-- **Status**: Specification complete
-- **Objective**: Multi-agent system structure using LangGraph with agent personas and communication protocols
-
 ### Module 4: Negotiation Logic & Optimization
-- **Status**: Design phase
-- **Objective**: Core negotiation algorithms and hybrid LLM-to-solver optimization
-
-### Module 5: Simulation Orchestration & Benchmarking
+- **Status**: Ready for development
+- **Objective**: Core negotiation algorithms and hybrid LLM-to-solver optimization### Module 5: Simulation Orchestration & Benchmarking
 - **Status**: Requirements defined
 - **Objective**: Simulation engine with performance comparison against centralized optimization
 
@@ -80,7 +96,13 @@ VPP_LLM_Agent/
 │   ├── llm_parser.py           # Natural language parser
 │   ├── test_module2.py         # Test suite
 │   └── README.md               # Module documentation
-├── module_3_agentic_framework/   # Agent system structure
+├── module_3_agentic_framework/      # ✅ Multi-agent system structure
+│   ├── agent_framework.py          # LangGraph-based negotiation workflow
+│   ├── schemas.py                  # Communication message schemas
+│   ├── prompts/                    # Agent system prompts
+│   ├── test_module3.py            # Validation suite
+│   ├── demo_module3.py            # Interactive demonstrations
+│   └── README.md                  # Module documentation
 ├── module_4_negotiation_logic/   # Negotiation algorithms
 ├── module_5_simulation_orchestration/ # Simulation engine
 └── module_6_visualization_dashboard/  # Web interface
@@ -115,6 +137,14 @@ python llm_parser.py        # Test natural language parsing
 python test_module2.py      # Run validation tests
 ```
 
+### Module 3 Usage
+```bash
+cd module_3_agentic_framework
+python demo_module3.py         # Run interactive demonstrations  
+python test_module3.py         # Validate all components
+python agent_framework.py      # Run basic negotiation test
+```
+
 ## Data Flow
 
 - **Market Data**: CAISO LMP and ancillary service prices → Module 3+ bid optimization
@@ -136,7 +166,13 @@ python test_module2.py      # Run validation tests
 - LLM parsing accuracy: 90%
 - Test coverage: 22/22 tests passing
 
+### Module 3
+- Multi-agent workflow: 7-node LangGraph negotiation system
+- Communication validation: 100% Pydantic schema compliance
+- Market coverage: Energy and ancillary services support
+- Test coverage: 5/5 test suites passing with comprehensive validation
+
 ---
 
 **Last Updated**: July 29, 2025  
-**Current Phase**: Module 2 complete, Module 3 ready for development
+**Current Phase**: Module 3 complete, Module 4 ready for development
