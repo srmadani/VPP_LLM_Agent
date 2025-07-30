@@ -13,9 +13,15 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
 
-# Add paths for imports
-sys.path.append('../module_2_asset_modeling')
-sys.path.append('../module_3_agentic_framework')
+# Add paths for imports using dynamic path resolution
+import os
+base_dir = os.path.dirname(os.path.dirname(__file__))
+module_2_path = os.path.join(base_dir, 'module_2_asset_modeling')
+module_3_path = os.path.join(base_dir, 'module_3_agentic_framework')
+
+for path in [module_2_path, module_3_path]:
+    if path not in sys.path:
+        sys.path.insert(0, path)
 
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -88,11 +94,11 @@ class CoreNegotiationEngine:
     def run_negotiation(
         self,
         market_opportunity: MarketOpportunity,
-        prosumer_fleet: List[Prosumer],
-        market_data: pd.DataFrame
+        prosumer_fleet: List[Any],  # List of Prosumer objects
+        market_data: Optional[pd.DataFrame] = None
     ) -> NegotiationResult:
         """
-        Run the complete multi-round negotiation process.
+        Execute complete negotiation workflow.
         
         Args:
             market_opportunity: The market opportunity to negotiate for
@@ -102,12 +108,15 @@ class CoreNegotiationEngine:
         Returns:
             NegotiationResult: Complete negotiation outcome
         """
+        import time
+        start_time = time.time()
+        
         negotiation_log = []
         negotiation_log.append(f"Starting negotiation for opportunity {market_opportunity.opportunity_id}")
         
         # Round 1: Initial bid collection
         initial_bids = self._collect_initial_bids(market_opportunity, prosumer_fleet)
-        negotiation_log.append(f"Collected {len(initial_bids)} initial bids")
+        negotiation_log.append(f"Collected {len(initial_bids)} initial bids from {len(prosumer_fleet)} prosumers")
         
         if not initial_bids:
             return NegotiationResult(
@@ -150,7 +159,11 @@ class CoreNegotiationEngine:
             final_bid_price = self._calculate_optimal_bid_price(final_coalition, market_opportunity)
             negotiation_log.append(f"Optimal bid price calculated: ${final_bid_price:.2f}/MWh")
         
-        return NegotiationResult(
+        # Calculate negotiation time
+        negotiation_time = time.time() - start_time
+        negotiation_log.append(f"Negotiation completed in {negotiation_time:.3f} seconds")
+        
+        result = NegotiationResult(
             success=success,
             coalition_members=final_coalition,
             total_capacity_mw=total_capacity_mw,
@@ -159,6 +172,11 @@ class CoreNegotiationEngine:
             prosumer_satisfaction_avg=avg_satisfaction,
             negotiation_log=negotiation_log
         )
+        
+        # Store negotiation time in result for dashboard access
+        result.negotiation_time = negotiation_time
+        
+        return result
     
     def _collect_initial_bids(
         self,
@@ -194,12 +212,18 @@ class CoreNegotiationEngine:
         # Determine availability based on user preferences and constraints
         is_available = available_capacity > 1.0  # Minimum 1kW to participate
         
-        # Apply user preference constraints
-        # Check backup power requirements using individual preference attributes
-        backup_requirement = 30.0  # Default backup power percentage
+        # Apply user preference constraints - more lenient backup power requirement
+        # Allow participation if SOC > 20% (instead of 30%) for better participation
+        backup_requirement = 20.0  # More lenient backup power percentage
         if prosumer.bess and prosumer.bess.current_soc_percent <= backup_requirement:
             is_available = False
             available_capacity = 0.0
+        
+        # Additional availability check - consider participation willingness
+        if hasattr(prosumer, 'participation_willingness'):
+            if prosumer.participation_willingness < 0.3:  # Very low willingness
+                is_available = False
+                available_capacity = 0.0
         
         # Calculate pricing using LLM
         min_price = self._calculate_prosumer_price(prosumer, opportunity, available_capacity)
@@ -302,8 +326,11 @@ class CoreNegotiationEngine:
         # Calculate target price (market price + profit margin)
         target_price = opportunity.market_price_mwh * (1.0 + self.target_profit_margin)
         
-        for i, bid in enumerate(ranked_bids[:10]):  # Top 10 bids only
-            if committed_capacity >= target_capacity_kw:
+        # Be more inclusive - counter-offer to more prosumers to build larger coalitions
+        max_offers = min(len(ranked_bids), 25)  # Up to 25 offers instead of 10
+        
+        for i, bid in enumerate(ranked_bids[:max_offers]):  # More inclusive approach
+            if committed_capacity >= target_capacity_kw * 1.5:  # Allow 150% of target for redundancy
                 break
                 
             # Determine offer strategy
@@ -440,34 +467,38 @@ class CoreNegotiationEngine:
         total_capacity = 0.0
         target_capacity = opportunity.required_capacity_mw * 1000.0
         
+        # Include more prosumers for redundancy and better satisfaction
+        # Allow up to 150% of target capacity or maximum available prosumers
+        capacity_limit = target_capacity * 1.5
+        
         for response in sorted_responses:
-            if total_capacity >= target_capacity:
-                break
-            
-            # Create coalition member with compatibility for both schema versions
-            try:
-                member = CoalitionMember(
-                    prosumer_id=response.prosumer_id,
-                    committed_capacity_kw=response.updated_capacity_kw,
-                    agreed_price_per_mwh=response.updated_price_per_mwh or 75.0,
-                    dispatch_schedule={response.prosumer_id: response.updated_capacity_kw},
-                    asset_type="BESS",  # Simplified for demo
-                    technical_constraints={"max_power_kw": 5.0, "efficiency": 0.95}
-                )
-            except TypeError:
-                # Fallback for different schema versions
-                from dataclasses import dataclass
-                member = type('CoalitionMember', (), {
-                    'prosumer_id': response.prosumer_id,
-                    'committed_capacity_kw': response.updated_capacity_kw,
-                    'agreed_price_per_mwh': response.updated_price_per_mwh or 75.0,
-                    'satisfaction_score': 6.0,  # Realistic satisfaction baseline
-                    'technical_constraints': {},
-                    'dispatch_flexibility': 0.8
-                })()
-            
-            coalition.append(member)
-            total_capacity += response.updated_capacity_kw
+            # Include prosumer if we haven't exceeded capacity limit or if we need more capacity
+            if total_capacity < target_capacity or (total_capacity < capacity_limit and len(coalition) < len(sorted_responses)):
+                
+                # Create coalition member with compatibility for both schema versions
+                try:
+                    member = CoalitionMember(
+                        prosumer_id=response.prosumer_id,
+                        committed_capacity_kw=response.updated_capacity_kw,
+                        agreed_price_per_mwh=response.updated_price_per_mwh or 75.0,
+                        dispatch_schedule={response.prosumer_id: response.updated_capacity_kw},
+                        asset_type="BESS",  # Simplified for demo
+                        technical_constraints={"max_power_kw": 5.0, "efficiency": 0.95}
+                    )
+                except TypeError:
+                    # Fallback for different schema versions
+                    from dataclasses import dataclass
+                    member = type('CoalitionMember', (), {
+                        'prosumer_id': response.prosumer_id,
+                        'committed_capacity_kw': response.updated_capacity_kw,
+                        'agreed_price_per_mwh': response.updated_price_per_mwh or 75.0,
+                        'satisfaction_score': 6.0,  # Realistic satisfaction baseline
+                        'technical_constraints': {},
+                        'dispatch_flexibility': 0.8
+                    })()
+                
+                coalition.append(member)
+                total_capacity += response.updated_capacity_kw
         
         return coalition
     
@@ -481,12 +512,24 @@ class CoreNegotiationEngine:
         if not coalition:
             return 0.0
         
-        # Calculate weighted average cost
+        # Calculate weighted average cost - with fallback for missing attributes
         total_capacity = sum(member.committed_capacity_kw for member in coalition)
-        weighted_cost = sum(
-            member.agreed_price_per_mwh * member.committed_capacity_kw 
-            for member in coalition
-        ) / total_capacity
+        if total_capacity == 0:
+            return 0.0
+            
+        # Handle both schema versions for agreed_price_per_mwh
+        total_weighted_cost = 0.0
+        for member in coalition:
+            # Try different attribute names for price
+            price = getattr(member, 'agreed_price_per_mwh', None)
+            if price is None:
+                price = getattr(member, 'price_per_mwh', None)
+            if price is None:
+                price = 70.0  # Realistic fallback price for residential prosumers
+            
+            total_weighted_cost += price * member.committed_capacity_kw
+        
+        weighted_cost = total_weighted_cost / total_capacity
         
         # Add profit margin and operational costs
         operational_cost = 5.0  # $5/MWh operational overhead
@@ -521,7 +564,12 @@ def test_negotiation_engine():
     )
     
     # Create sample prosumer fleet
-    fleet_gen = FleetGenerator()
+    # Use absolute path to data directory
+    import os
+    from pathlib import Path
+    base_path = Path(__file__).parent.parent
+    data_path = str(base_path / 'module_1_data_simulation' / 'data')
+    fleet_gen = FleetGenerator(data_path=data_path)
     prosumers = fleet_gen.create_prosumer_fleet(10)
     
     # Create sample market data

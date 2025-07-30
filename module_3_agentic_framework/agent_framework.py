@@ -17,7 +17,12 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 
 # Import from other modules
-sys.path.append('../module_2_asset_modeling')
+# Use dynamic path resolution instead of hardcoded relative paths
+import os
+module_2_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'module_2_asset_modeling')
+if module_2_path not in sys.path:
+    sys.path.insert(0, module_2_path)
+    
 from prosumer_models import Prosumer
 from fleet_generator import FleetGenerator
 
@@ -37,12 +42,13 @@ class VPPAgentFramework:
     AggregatorAgent and ProsumerAgents.
     """
     
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, data_path: Optional[str] = None):
         """
         Initialize the VPP agent framework.
         
         Args:
             api_key: Gemini API key (loads from .env if not provided)
+            data_path: Path to Module 1 data directory (uses default if not provided)
         """
         # Load environment variables
         load_dotenv()
@@ -67,7 +73,12 @@ class VPPAgentFramework:
         
         # Initialize prosumer fleet (will be populated when needed)
         self.prosumer_fleet: Dict[str, Prosumer] = {}
-        self.fleet_generator = FleetGenerator()
+        
+        # Initialize fleet generator with data path
+        if data_path:
+            self.fleet_generator = FleetGenerator(data_path=data_path)
+        else:
+            self.fleet_generator = FleetGenerator()  # Use default path
         
         # Create the LangGraph workflow
         self.workflow = self._create_workflow()
@@ -559,19 +570,50 @@ class VPPAgentFramework:
             Final agent state with negotiation results
         """
         
-        # Initialize prosumer fleet if needed
-        if not self.prosumer_fleet:
+        # Initialize prosumer fleet (reinitialize if size differs)
+        current_fleet_size = len(self.prosumer_fleet) if self.prosumer_fleet else 0
+        if not self.prosumer_fleet or current_fleet_size != fleet_size:
             self.initialize_prosumer_fleet(fleet_size)
         
         # Create market opportunity if not provided
         if market_opportunity is None:
             market_opportunity = self.create_market_opportunity()
         
-        # Initialize agent state
-        initial_state = AgentState(
-            current_opportunity=market_opportunity,
-            max_rounds=3
-        )
+        # Initialize agent state with robust schema handling
+        try:
+            # Try direct initialization first
+            initial_state = AgentState(
+                current_opportunity=market_opportunity,
+                max_rounds=3
+            )
+        except Exception as e:
+            print(f"⚠️  Direct AgentState initialization failed: {e}")
+            print("🔄 Attempting with dictionary conversion...")
+            
+            # Fallback: convert to dict and recreate
+            try:
+                if hasattr(market_opportunity, 'model_dump'):
+                    opp_dict = market_opportunity.model_dump()
+                elif hasattr(market_opportunity, 'dict'):
+                    opp_dict = market_opportunity.dict()
+                else:
+                    opp_dict = market_opportunity
+                
+                # Recreate MarketOpportunity from dict to ensure clean schema
+                fresh_opportunity = MarketOpportunity(**opp_dict)
+                
+                initial_state = AgentState(
+                    current_opportunity=fresh_opportunity,
+                    max_rounds=3
+                )
+                print("✅ AgentState initialized with schema refresh")
+                
+            except Exception as e2:
+                print(f"❌ Schema refresh also failed: {e2}")
+                # Last resort: initialize without opportunity and set it manually
+                initial_state = AgentState(max_rounds=3)
+                initial_state.current_opportunity = market_opportunity
+                print("⚠️  Using manual assignment fallback")
         
         print(f"🚀 Starting VPP negotiation for opportunity {market_opportunity.opportunity_id}")
         print("=" * 80)
